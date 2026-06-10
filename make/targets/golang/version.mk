@@ -9,11 +9,28 @@ include $(addprefix $(dir $(lastword $(MAKEFILE_LIST))), \
 
 verify-golang-versions:
 	@if [ -f "$(PERMANENT_TMP)/golang-versions" ]; then \
-		LINES=$$(cat "$(PERMANENT_TMP)/golang-versions" | sort | uniq | wc -l); \
-			if [ $${LINES} -gt 1 ]; then \
+		GOMOD_VER=""; \
+		CI_VER=""; \
+		if [ -f "$(PERMANENT_TMP)/named-golang-versions" ]; then \
+			GOMOD_VER=$$(grep '^go\.mod:' "$(PERMANENT_TMP)/named-golang-versions" | sed 's/go\.mod: *//'); \
+			CI_VER=$$(grep -v '^go\.mod:' "$(PERMANENT_TMP)/named-golang-versions" | sed 's/^[^:]*: *//' | sort | uniq); \
+		fi; \
+		CI_COUNT=$$(echo "$${CI_VER}" | grep -c . 2>/dev/null || :); \
+		if [ "$${CI_COUNT}" -gt 1 ]; then \
 			echo "Golang version mismatch:"; \
 			cat "$(PERMANENT_TMP)/named-golang-versions" | sort | sed 's/^/- /'; \
 			false; \
+		elif [ -n "$${GOMOD_VER}" ] && [ -n "$${CI_VER}" ]; then \
+			GOMOD_MAJOR=$$(echo "$${GOMOD_VER}" | cut -d. -f1); \
+			GOMOD_MINOR=$$(echo "$${GOMOD_VER}" | cut -d. -f2); \
+			CI_MAJOR=$$(echo "$${CI_VER}" | cut -d. -f1); \
+			CI_MINOR=$$(echo "$${CI_VER}" | cut -d. -f2); \
+			if [ "$${GOMOD_MAJOR}" -gt "$${CI_MAJOR}" ] 2>/dev/null || \
+			   { [ "$${GOMOD_MAJOR}" -eq "$${CI_MAJOR}" ] 2>/dev/null && [ "$${GOMOD_MINOR}" -gt "$${CI_MINOR}" ] 2>/dev/null; }; then \
+				echo "Golang version mismatch:"; \
+				cat "$(PERMANENT_TMP)/named-golang-versions" | sort | sed 's/^/- /'; \
+				false; \
+			fi; \
 		fi; \
 	fi
 .PHONY: verify-golang-versions

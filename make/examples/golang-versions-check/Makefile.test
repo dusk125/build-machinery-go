@@ -10,4 +10,5 @@ test-golang-versions:
 	@! $(MAKE) -f fail-4.mk
 	@$(MAKE) -f success-1.mk
 	@$(MAKE) -f success-2.mk
+	@$(MAKE) -f success-4.mk
 .PHONY: test-golang-versions
